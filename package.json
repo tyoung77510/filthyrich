@@ -1,0 +1,12 @@
+{
+  "name": "filthyrich-707-fc",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Filthy Rich 707 Football Club — player signup, tournament schedule/registration, and video links.",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "start": "node backend/src/server.js"
+  }
+}

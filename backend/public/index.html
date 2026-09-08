@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Filthy Rich 707 Football Club</title>
+<style>
+  :root {
+    --bg: #0b0d10;
+    --panel: #14171b;
+    --panel-2: #1c2027;
+    --border: #262b33;
+    --text: #f2f3f5;
+    --text-dim: #9aa1ac;
+    --gold: #d4af37;
+    --gold-dim: #a9872c;
+    --red: #b5121b;
+    --danger: #e5484d;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    background: linear-gradient(90deg, var(--red), #7a0d13);
+    border-bottom: 3px solid var(--gold);
+  }
+  header .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 800;
+    font-size: 1.15rem;
+    letter-spacing: 0.02em;
+  }
+  header .brand .num { color: var(--gold); }
+  nav { display: flex; gap: 6px; }
+  nav button {
+    background: transparent;
+    border: 1px solid transparent;
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+  nav button.active, nav button:hover { background: rgba(255,255,255,0.15); }
+  #authArea { display: flex; align-items: center; gap: 10px; }
+  #authArea span { font-size: 0.85rem; color: #f3d9db; }
+  button.primary {
+    background: var(--gold);
+    color: #1a1400;
+    border: none;
+    padding: 8px 14px;
+    border-radius: var(--radius);
+    font-weight: 700;
+    cursor: pointer;
+  }
+  button.secondary {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 8px 14px;
+    border-radius: var(--radius);
+    cursor: pointer;
+  }
+  button.danger { background: var(--danger); color: #fff; border: none; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; }
+  main { max-width: 960px; margin: 0 auto; padding: 24px; }
+  .view { display: none; }
+  .view.active { display: block; }
+  h1 { font-size: 1.4rem; margin-bottom: 4px; }
+  .subtle { color: var(--text-dim); font-size: 0.9rem; margin-bottom: 20px; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    margin-bottom: 14px;
+  }
+  .card h3 { margin: 0 0 6px 0; }
+  .meta { color: var(--text-dim); font-size: 0.85rem; margin-bottom: 10px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .row.between { justify-content: space-between; }
+  form.stack { display: flex; flex-direction: column; gap: 10px; max-width: 420px; }
+  form.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 640px; }
+  label { font-size: 0.8rem; color: var(--text-dim); display: block; margin-bottom: 4px; }
+  input, textarea, select {
+    width: 100%;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 9px 10px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+  }
+  textarea { min-height: 70px; resize: vertical; }
+  .pill {
+    display: inline-block;
+    background: rgba(212,175,55,0.15);
+    color: var(--gold);
+    border: 1px solid rgba(212,175,55,0.4);
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .error { color: var(--danger); font-size: 0.85rem; min-height: 1.1em; }
+  .success { color: #6fd08c; font-size: 0.85rem; min-height: 1.1em; }
+  a.videolink { color: var(--gold); text-decoration: none; word-break: break-all; }
+  a.videolink:hover { text-decoration: underline; }
+  .empty { color: var(--text-dim); font-style: italic; padding: 12px 0; }
+  .roster-list { list-style: none; margin: 0; padding: 0; }
+  .roster-list li { padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+  .roster-list li:last-child { border-bottom: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand"><span>FILTHY RICH <span class="num">707</span></span> Football Club</div>
+  <nav>
+    <button data-view="schedule" class="navbtn active">Schedule</button>
+    <button data-view="profile" class="navbtn">My Profile</button>
+    <button data-view="admin" class="navbtn" id="adminNavBtn" hidden>Admin</button>
+  </nav>
+  <div id="authArea"></div>
+</header>
+
+<main>
+
+  <!-- SCHEDULE / TOURNAMENT LIST -->
+  <section id="view-schedule" class="view active">
+    <h1>Upcoming Tournaments</h1>
+    <p class="subtle">Sign up, check dates, and register for the tournaments below.</p>
+    <div id="tournamentList"></div>
+  </section>
+
+  <!-- SINGLE TOURNAMENT -->
+  <section id="view-tournament" class="view">
+    <button class="secondary" id="backToSchedule">&larr; Back to schedule</button>
+    <div id="tournamentDetail"></div>
+  </section>
+
+  <!-- PROFILE -->
+  <section id="view-profile" class="view">
+    <div id="profileLoggedOut">
+      <h1>My Profile</h1>
+      <p class="subtle">Sign in or create an account to manage your profile, register for tournaments, and add video.</p>
+    </div>
+    <div id="profileLoggedIn" hidden>
+      <h1>My Profile</h1>
+      <p class="subtle">Keep this current — coaches and recruiters may check it.</p>
+
+      <div class="card">
+        <h3>Player Info</h3>
+        <form class="grid2" id="profileForm">
+          <div><label>Position</label><input name="position" placeholder="e.g. WR / CB" /></div>
+          <div><label>Graduation Year</label><input name="grad_year" type="number" placeholder="2027" /></div>
+          <div><label>High School</label><input name="high_school" placeholder="e.g. Santa Rosa HS" /></div>
+          <div><label>City / State</label><input name="city" placeholder="Santa Rosa, CA" /></div>
+          <div><label>Height</label><input name="height" placeholder="5'11&quot;" /></div>
+          <div><label>Weight</label><input name="weight" placeholder="175 lbs" /></div>
+          <div style="grid-column: 1 / -1;"><label>Bio</label><textarea name="bio" placeholder="A little about you..."></textarea></div>
+          <div style="grid-column: 1 / -1;">
+            <button class="primary" type="submit">Save Profile</button>
+            <span class="success" id="profileSaveMsg"></span>
+          </div>
+        </form>
+      </div>
+
+      <div class="card">
+        <h3>My Videos</h3>
+        <p class="subtle">Paste a link to your highlight reel or game film from YouTube, Vimeo, or Hudl — no upload needed.</p>
+        <form class="grid2" id="videoForm">
+          <div><label>Title</label><input name="title" placeholder="e.g. Junior Year Highlights" required /></div>
+          <div>
+            <label>Type</label>
+            <select name="type">
+              <option value="highlight">Highlight Reel</option>
+              <option value="game_film">Full Game Film</option>
+            </select>
+          </div>
+          <div style="grid-column: 1 / -1;"><label>Video Link (YouTube / Vimeo / Hudl)</label><input name="url" placeholder="https://youtube.com/..." required /></div>
+          <div style="grid-column: 1 / -1;">
+            <button class="primary" type="submit">Add Video</button>
+            <span class="error" id="videoErrorMsg"></span>
+          </div>
+        </form>
+        <div id="videoList" style="margin-top: 14px;"></div>
+      </div>
+
+      <div class="card">
+        <h3>My Registrations</h3>
+        <div id="myRegistrations"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- AUTH MODAL-ISH VIEW -->
+  <section id="view-auth" class="view">
+    <h1 id="authTitle">Sign In</h1>
+    <form class="stack" id="authForm">
+      <div id="nameField" hidden><label>Name</label><input name="name" placeholder="Your full name" /></div>
+      <div><label>Email</label><input name="email" type="email" required /></div>
+      <div><label>Password</label><input name="password" type="password" required minlength="8" /></div>
+      <button class="primary" type="submit" id="authSubmitBtn">Sign In</button>
+      <span class="error" id="authErrorMsg"></span>
+      <a href="#" id="authToggleLink" style="color: var(--gold); font-size: 0.85rem;">Need an account? Sign up</a>
+    </form>
+  </section>
+
+  <!-- ADMIN: CREATE TOURNAMENT -->
+  <section id="view-admin" class="view">
+    <h1>Admin — Create Tournament</h1>
+    <form class="grid2" id="tournamentForm">
+      <div><label>Name</label><input name="name" required /></div>
+      <div><label>Location</label><input name="location" /></div>
+      <div><label>Start Date</label><input name="start_date" type="date" required /></div>
+      <div><label>End Date</label><input name="end_date" type="date" /></div>
+      <div><label>Registration Deadline</label><input name="registration_deadline" type="date" /></div>
+      <div style="grid-column: 1 / -1;"><label>Description</label><textarea name="description"></textarea></div>
+      <div style="grid-column: 1 / -1;">
+        <button class="primary" type="submit">Create Tournament</button>
+        <span class="success" id="tournamentCreateMsg"></span>
+      </div>
+    </form>
+  </section>
+
+</main>
+
+<script>
+(function () {
+  const API = '/api';
+  let token = localStorage.getItem('frfc_token') || null;
+  let currentUserData = null;
+  let authMode = 'login';
+
+  // ---- helpers ----
+  function $(sel) { return document.querySelector(sel); }
+  function $all(sel) { return Array.from(document.querySelectorAll(sel)); }
+
+  async function api(path, opts = {}) {
+    const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    const res = await fetch(API + path, { ...opts, headers });
+    let data = null;
+    try { data = await res.json(); } catch { /* no body */ }
+    if (!res.ok) throw new Error((data && data.error) || 'Request failed');
+    return data;
+  }
+
+  function showView(name) {
+    $all('.view').forEach((v) => v.classList.remove('active'));
+    const el = document.getElementById('view-' + name);
+    if (el) el.classList.add('active');
+    $all('.navbtn').forEach((b) => b.classList.toggle('active', b.dataset.view === name));
+  }
+
+  function fmtDate(d) {
+    if (!d) return '';
+    try {
+      return new Date(d + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch { return d; }
+  }
+
+  // ---- auth UI ----
+  function renderAuthArea() {
+    const area = $('#authArea');
+    area.innerHTML = '';
+    if (currentUserData) {
+      const span = document.createElement('span');
+      span.textContent = 'Hi, ' + currentUserData.name;
+      const btn = document.createElement('button');
+      btn.className = 'secondary';
+      btn.textContent = 'Sign Out';
+      btn.onclick = doLogout;
+      area.append(span, btn);
+      document.getElementById('adminNavBtn').hidden = currentUserData.role !== 'admin';
+    } else {
+      const btn = document.createElement('button');
+      btn.className = 'primary';
+      btn.textContent = 'Sign In / Sign Up';
+      btn.onclick = () => { showView('auth'); };
+      area.append(btn);
+      document.getElementById('adminNavBtn').hidden = true;
+    }
+  }
+
+  async function refreshMe() {
+    if (!token) { currentUserData = null; renderAuthArea(); return; }
+    try {
+      currentUserData = await api('/auth/me');
+    } catch {
+      token = null;
+      localStorage.removeItem('frfc_token');
+      currentUserData = null;
+    }
+    renderAuthArea();
+    renderProfileView();
+  }
+
+  function doLogout() {
+    api('/auth/logout', { method: 'POST' }).catch(() => {});
+    token = null;
+    localStorage.removeItem('frfc_token');
+    currentUserData = null;
+    renderAuthArea();
+    renderProfileView();
+    showView('schedule');
+  }
+
+  $('#authToggleLink').addEventListener('click', (e) => {
+    e.preventDefault();
+    authMode = authMode === 'login' ? 'signup' : 'login';
+    $('#authTitle').textContent = authMode === 'login' ? 'Sign In' : 'Create Account';
+    $('#authSubmitBtn').textContent = authMode === 'login' ? 'Sign In' : 'Sign Up';
+    $('#nameField').hidden = authMode !== 'signup';
+    $('#authToggleLink').textContent = authMode === 'login' ? 'Need an account? Sign up' : 'Already have an account? Sign in';
+    $('#authErrorMsg').textContent = '';
+  });
+
+  $('#authForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const body = Object.fromEntries(fd.entries());
+    $('#authErrorMsg').textContent = '';
+    try {
+      const path = authMode === 'login' ? '/auth/login' : '/auth/signup';
+      const result = await api(path, { method: 'POST', body: JSON.stringify(body) });
+      token = result.token;
+      localStorage.setItem('frfc_token', token);
+      currentUserData = result.user;
+      renderAuthArea();
+      e.target.reset();
+      showView('profile');
+      renderProfileView();
+    } catch (err) {
+      $('#authErrorMsg').textContent = err.message;
+    }
+  });
+
+  // ---- schedule / tournaments ----
+  async function renderSchedule() {
+    const list = $('#tournamentList');
+    list.innerHTML = '<p class="empty">Loading...</p>';
+    try {
+      const tournaments = await api('/tournaments');
+      if (tournaments.length === 0) {
+        list.innerHTML = '<p class="empty">No tournaments posted yet — check back soon.</p>';
+        return;
+      }
+      list.innerHTML = '';
+      tournaments.forEach((t) => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <div class="row between">
+            <h3>${escapeHtml(t.name)}</h3>
+            <span class="pill">${fmtDate(t.start_date)}${t.end_date ? ' – ' + fmtDate(t.end_date) : ''}</span>
+          </div>
+          <div class="meta">${t.location ? escapeHtml(t.location) : 'Location TBA'}${t.registration_deadline ? ' &middot; Register by ' + fmtDate(t.registration_deadline) : ''}</div>
+          ${t.description ? '<p>' + escapeHtml(t.description) + '</p>' : ''}
+          <button class="secondary" data-id="${t.id}">View & Register</button>
+        `;
+        card.querySelector('button').onclick = () => openTournament(t.id);
+        list.appendChild(card);
+      });
+    } catch (err) {
+      list.innerHTML = '<p class="error">Could not load tournaments: ' + escapeHtml(err.message) + '</p>';
+    }
+  }
+
+  async function openTournament(id) {
+    showView('tournament');
+    const detail = $('#tournamentDetail');
+    detail.innerHTML = '<p class="empty">Loading...</p>';
+    try {
+      const t = await api('/tournaments/' + id);
+      const alreadyRegistered = currentUserData && t.roster.some((r) => r.id === currentUserData.id);
+      detail.innerHTML = `
+        <h1>${escapeHtml(t.name)}</h1>
+        <p class="subtle">${t.location ? escapeHtml(t.location) : 'Location TBA'} &middot; ${fmtDate(t.start_date)}${t.end_date ? ' – ' + fmtDate(t.end_date) : ''}</p>
+        ${t.description ? '<div class="card">' + escapeHtml(t.description) + '</div>' : ''}
+        <div class="card">
+          <div class="row between">
+            <h3>Roster (${t.roster.length})</h3>
+            ${currentUserData ? `<button class="primary" id="registerBtn">${alreadyRegistered ? 'Cancel Registration' : 'Register'}</button>` : '<span class="subtle">Sign in to register</span>'}
+          </div>
+          <span class="error" id="registerErrorMsg"></span>
+          ${t.roster.length
+            ? '<ul class="roster-list">' + t.roster.map((r) => '<li>' + escapeHtml(r.name) + '</li>').join('') + '</ul>'
+            : '<p class="empty">No one registered yet — be the first.</p>'}
+        </div>
+      `;
+      if (currentUserData) {
+        $('#registerBtn').onclick = async () => {
+          try {
+            if (alreadyRegistered) {
+              await api('/tournaments/' + id + '/register', { method: 'DELETE' });
+            } else {
+              await api('/tournaments/' + id + '/register', { method: 'POST' });
+            }
+            openTournament(id);
+          } catch (err) {
+            $('#registerErrorMsg').textContent = err.message;
+          }
+        };
+      }
+    } catch (err) {
+      detail.innerHTML = '<p class="error">Could not load tournament: ' + escapeHtml(err.message) + '</p>';
+    }
+  }
+
+  $('#backToSchedule').onclick = () => showView('schedule');
+
+  // ---- profile ----
+  function renderProfileView() {
+    $('#profileLoggedOut').hidden = !!currentUserData;
+    $('#profileLoggedIn').hidden = !currentUserData;
+    if (!currentUserData) return;
+
+    const p = currentUserData.profile || {};
+    const form = $('#profileForm');
+    ['position', 'grad_year', 'high_school', 'city', 'state', 'height', 'weight', 'bio'].forEach((f) => {
+      if (form.elements[f]) form.elements[f].value = p[f] || '';
+    });
+
+    loadVideos();
+    loadMyRegistrations();
+  }
+
+  $('#profileForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const body = Object.fromEntries(fd.entries());
+    $('#profileSaveMsg').textContent = '';
+    try {
+      currentUserData = await api('/players/me', { method: 'PATCH', body: JSON.stringify(body) });
+      $('#profileSaveMsg').textContent = 'Saved.';
+      setTimeout(() => { $('#profileSaveMsg').textContent = ''; }, 2500);
+    } catch (err) {
+      $('#profileSaveMsg').textContent = '';
+      alert('Could not save profile: ' + err.message);
+    }
+  });
+
+  async function loadVideos() {
+    if (!currentUserData) return;
+    const list = $('#videoList');
+    list.innerHTML = '<p class="empty">Loading...</p>';
+    try {
+      const videos = await api('/players/' + currentUserData.id + '/videos');
+      if (videos.length === 0) {
+        list.innerHTML = '<p class="empty">No videos added yet.</p>';
+        return;
+      }
+      list.innerHTML = '';
+      videos.forEach((v) => {
+        const row = document.createElement('div');
+        row.className = 'row between';
+        row.style.padding = '8px 0';
+        row.style.borderBottom = '1px solid var(--border)';
+        row.innerHTML = `
+          <div>
+            <strong>${escapeHtml(v.title)}</strong>
+            <span class="pill" style="margin-left: 6px;">${v.type === 'game_film' ? 'Game Film' : 'Highlight'}</span><br/>
+            <a class="videolink" href="${escapeHtml(v.url)}" target="_blank" rel="noopener">${escapeHtml(v.url)}</a>
+          </div>
+          <button class="danger" data-id="${v.id}">Remove</button>
+        `;
+        row.querySelector('button').onclick = async () => {
+          try {
+            await api('/videos/' + v.id, { method: 'DELETE' });
+            loadVideos();
+          } catch (err) {
+            alert('Could not remove video: ' + err.message);
+          }
+        };
+        list.appendChild(row);
+      });
+    } catch (err) {
+      list.innerHTML = '<p class="error">' + escapeHtml(err.message) + '</p>';
+    }
+  }
+
+  $('#videoForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const body = Object.fromEntries(fd.entries());
+    $('#videoErrorMsg').textContent = '';
+    try {
+      await api('/videos', { method: 'POST', body: JSON.stringify(body) });
+      e.target.reset();
+      loadVideos();
+    } catch (err) {
+      $('#videoErrorMsg').textContent = err.message;
+    }
+  });
+
+  async function loadMyRegistrations() {
+    const container = $('#myRegistrations');
+    container.innerHTML = '<p class="empty">Loading...</p>';
+    try {
+      const tournaments = await api('/tournaments');
+      const mine = [];
+      for (const t of tournaments) {
+        const detail = await api('/tournaments/' + t.id);
+        if (detail.roster.some((r) => r.id === currentUserData.id)) mine.push(t);
+      }
+      if (mine.length === 0) {
+        container.innerHTML = '<p class="empty">Not registered for anything yet — check the Schedule tab.</p>';
+        return;
+      }
+      container.innerHTML = mine
+        .map((t) => `<div>&bull; ${escapeHtml(t.name)} — ${fmtDate(t.start_date)}</div>`)
+        .join('');
+    } catch (err) {
+      container.innerHTML = '<p class="error">' + escapeHtml(err.message) + '</p>';
+    }
+  }
+
+  // ---- admin ----
+  $('#tournamentForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const body = Object.fromEntries(fd.entries());
+    $('#tournamentCreateMsg').textContent = '';
+    try {
+      await api('/tournaments', { method: 'POST', body: JSON.stringify(body) });
+      $('#tournamentCreateMsg').textContent = 'Created.';
+      e.target.reset();
+      renderSchedule();
+      setTimeout(() => { $('#tournamentCreateMsg').textContent = ''; }, 2500);
+    } catch (err) {
+      alert('Could not create tournament: ' + err.message);
+    }
+  });
+
+  // ---- nav ----
+  $all('.navbtn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      showView(btn.dataset.view);
+      if (btn.dataset.view === 'profile') renderProfileView();
+    });
+  });
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    }[c]));
+  }
+
+  // ---- init ----
+  renderAuthArea();
+  renderSchedule();
+  refreshMe();
+})();
+</script>
+
+</body>
+</html>
