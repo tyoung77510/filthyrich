@@ -2,3 +2,7 @@ node_modules/
 backend/data/
 .env
 *.log
+
+# Capacitor: android/ and ios/ are committed (real Xcode/Gradle projects,
+# same convention as any other Capacitor app) — their own .gitignore files
+# (scaffolded by `cap add`) handle build artifacts, Pods, xcuserdata, etc.

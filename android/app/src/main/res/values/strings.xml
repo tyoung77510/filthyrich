@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Filthy Rich 7v7</string>
+    <string name="title_activity_main">Filthy Rich 7v7</string>
+    <string name="package_name">com.filthyrich7v7.app</string>
+    <string name="custom_url_scheme">com.filthyrich7v7.app</string>
+</resources>

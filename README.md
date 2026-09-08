@@ -15,8 +15,10 @@ node backend/src/server.js
 
 Then open http://localhost:3000.
 
-Requires **Node ≥ 22.5** (for `node:sqlite`). No `npm install` needed — zero external
-dependencies, same as the rest of the Level 7 codebase.
+Requires **Node ≥ 22.5** (for `node:sqlite`). The backend itself needs no `npm install` — zero
+external dependencies, same as the rest of the Level 7 codebase. `npm install` *is* needed if
+you're touching the mobile app wrapper (`android/`, `ios/` — see below); that's a separate,
+build-time-only toolchain (Capacitor) and doesn't touch anything the server runs.
 
 ## What's here (v1)
 
@@ -44,6 +46,14 @@ dependencies, same as the rest of the Level 7 codebase.
 - Team rosters beyond a single club-wide player pool (no sub-teams/age-groups yet).
 - Admin invite flow (only the bootstrap first-account-becomes-admin path exists).
 
+## Mobile app (iOS / Android)
+
+The frontend is mobile-optimized (bottom tab bar, single-column forms on narrow screens) and
+there's a [Capacitor](https://capacitorjs.com) native shell scaffolded (`android/`, `ios/`) toward
+real App Store / Play Store listings. **See `MOBILE.md` for the full status and what's still
+blocking submission** — hosting, developer accounts, and iOS build/signing all need action outside
+this repo.
+
 ## Project layout
 
 ```
@@ -54,6 +64,11 @@ backend/
     auth.js     # password hashing + sessions
   public/
     index.html  # the whole frontend (vanilla JS, no build step)
+android/          # Capacitor native Android project (generated, mostly not hand-edited)
+ios/              # Capacitor native iOS project (generated, mostly not hand-edited)
+assets/           # source icon for `npm run cap:icons` (@capacitor/assets)
+capacitor.config.json
 ```
 
-See `CLAUDE.md` for architecture notes and the assumptions made while scaffolding this.
+See `CLAUDE.md` for architecture notes and the assumptions made while scaffolding this, and
+`MOBILE.md` for the app-store path specifically.
