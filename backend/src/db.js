@@ -37,6 +37,14 @@ db.exec(`
     height TEXT,
     weight TEXT,
     bio TEXT,
+    -- Contact info below is PRIVATE — never returned by the public roster
+    -- directory or a public player-by-id lookup (see publicProfile() vs
+    -- ownProfile()/handleGetPlayer() in server.js). Only the player
+    -- themselves and admins can read or write it.
+    phone TEXT,
+    contact_email TEXT,
+    parent_phone TEXT,
+    parent_email TEXT,
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
 

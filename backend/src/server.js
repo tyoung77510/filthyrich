@@ -14,6 +14,10 @@ const {
 } = require('./auth');
 
 ensureColumn('users', 'role', "role TEXT NOT NULL DEFAULT 'player'");
+ensureColumn('player_profiles', 'phone', 'phone TEXT');
+ensureColumn('player_profiles', 'contact_email', 'contact_email TEXT');
+ensureColumn('player_profiles', 'parent_phone', 'parent_phone TEXT');
+ensureColumn('player_profiles', 'parent_email', 'parent_email TEXT');
 
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
@@ -89,6 +93,12 @@ function isValidVideoUrl(raw) {
   }
 }
 
+// Deliberately loose — just enough to catch typos in a contact email, not a
+// full RFC 5322 validator.
+function isValidEmail(raw) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(raw).trim());
+}
+
 // Full profile — includes email. Only for the signed-in owner looking at their
 // own account (handleMe/handleUpdateProfile), never for viewing someone else.
 function ownProfile(userRow) {
@@ -104,12 +114,21 @@ function ownProfile(userRow) {
   };
 }
 
-// Public profile — no email. Anyone can look up a player by ID (recruiters
-// browsing the roster don't have accounts), so this must never leak contact
-// info; only the player themselves sees their own email, via ownProfile.
+// Columns safe to show on a public player page — deliberately an allowlist,
+// not "everything except X", so a new sensitive column added to
+// player_profiles later is private by default until someone explicitly
+// decides it belongs here.
+const PUBLIC_PROFILE_COLUMNS = 'user_id, position, grad_year, high_school, city, state, height, weight, bio';
+
+// Public profile — no account email, no phone, no parent contact info.
+// Anyone can look up a player by ID with no auth at all (recruiters browsing
+// the roster don't have accounts), so this must never leak contact info for
+// the player or, especially, for a minor's parent/guardian. Only the player
+// themselves and admins see the full picture — see handleGetPlayer, which
+// decides which of publicProfile()/ownProfile() to return.
 function publicProfile(userRow) {
   const profile = db
-    .prepare('SELECT * FROM player_profiles WHERE user_id = ?')
+    .prepare(`SELECT ${PUBLIC_PROFILE_COLUMNS} FROM player_profiles WHERE user_id = ?`)
     .get(userRow.id);
   return {
     id: userRow.id,
@@ -181,9 +200,19 @@ async function handleUpdateProfile(req, res) {
   const user = requireAuth(req, res);
   if (!user) return;
   const body = await readBody(req);
-  const fields = ['position', 'grad_year', 'high_school', 'city', 'state', 'height', 'weight', 'bio'];
+  const fields = [
+    'position', 'grad_year', 'high_school', 'city', 'state', 'height', 'weight', 'bio',
+    'phone', 'contact_email', 'parent_phone', 'parent_email',
+  ];
   const updates = fields.filter((f) => f in body);
   if (updates.length === 0) return send(res, 400, { error: 'No recognized fields provided' });
+
+  for (const f of ['contact_email', 'parent_email']) {
+    const value = body[f];
+    if (value && !isValidEmail(value)) {
+      return send(res, 400, { error: `${f.replace('_', ' ')} doesn't look like a valid email` });
+    }
+  }
 
   const setClause = updates.map((f) => `${f} = ?`).join(', ');
   const values = updates.map((f) => body[f]);
@@ -194,7 +223,13 @@ async function handleUpdateProfile(req, res) {
 function handleGetPlayer(req, res, id) {
   const row = db.prepare('SELECT id, name, role FROM users WHERE id = ?').get(id);
   if (!row) return send(res, 404, { error: 'Player not found' });
-  send(res, 200, publicProfile(row));
+  // Contact info (phone, contact email, parent phone/email) and the account
+  // email are only included for the player's own account or an admin/coach
+  // who has a real reason to reach them or their parent — anonymous and
+  // other-player requests get the public, contact-free view.
+  const requester = currentUser(req);
+  const canSeeContact = requester && (requester.id === row.id || requester.role === 'admin');
+  send(res, 200, canSeeContact ? ownProfile(row) : publicProfile(row));
 }
 
 // Public roster directory — no auth required, so coaches/recruiters can browse

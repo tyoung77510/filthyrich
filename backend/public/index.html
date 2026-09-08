@@ -166,6 +166,7 @@
     /* Only the trailing "own line" primary actions go full-width on mobile —
        header/inline buttons (Sign In, Register, Back) keep their natural size. */
     #profileForm > div:last-child button.primary,
+    #contactForm > div:last-child button.primary,
     #videoForm > div:last-child button.primary,
     #tournamentForm > div:last-child button.primary,
     #authForm button.primary { width: 100%; }
@@ -248,6 +249,22 @@
           <div style="grid-column: 1 / -1;">
             <button class="primary" type="submit">Save Profile</button>
             <span class="success" id="profileSaveMsg"></span>
+          </div>
+        </form>
+      </div>
+
+      <div class="card">
+        <h3>Contact Info</h3>
+        <p class="subtle">Private — only visible to you and club admins/coaches. Never shown on your public player page.</p>
+        <form class="grid2" id="contactForm">
+          <div><label>Your Phone</label><input name="phone" type="tel" placeholder="(707) 555-0100" /></div>
+          <div><label>Your Contact Email</label><input name="contact_email" type="email" placeholder="you@example.com" /></div>
+          <div><label>Parent/Guardian Phone</label><input name="parent_phone" type="tel" placeholder="(707) 555-0101" /></div>
+          <div><label>Parent/Guardian Email</label><input name="parent_email" type="email" placeholder="parent@example.com" /></div>
+          <div style="grid-column: 1 / -1;">
+            <button class="primary" type="submit">Save Contact Info</button>
+            <span class="success" id="contactSaveMsg"></span>
+            <span class="error" id="contactErrorMsg"></span>
           </div>
         </form>
       </div>
@@ -556,10 +573,32 @@
       const meta = [p.position, p.grad_year ? 'Class of ' + p.grad_year : null, p.high_school, [p.city, p.state].filter(Boolean).join(', '), p.height, p.weight]
         .filter(Boolean)
         .join(' &middot; ');
+      // The API only includes phone/contact_email/parent_* keys at all when
+      // this viewer is the player themselves or an admin (see handleGetPlayer
+      // server-side) — 'phone' in p is how we tell "privileged view, field
+      // just empty" apart from "public view, field hidden".
+      const hasContactAccess = 'phone' in p;
+      const contactRows = [
+        ['Player phone', p.phone],
+        ['Player email', p.contact_email],
+        ['Parent/guardian phone', p.parent_phone],
+        ['Parent/guardian email', p.parent_email],
+      ].filter(([, value]) => value);
       detail.innerHTML = `
         <h1>${escapeHtml(player.name)}</h1>
         <p class="subtle">${meta || 'No profile info yet'}</p>
         ${p.bio ? '<div class="card">' + escapeHtml(p.bio) + '</div>' : ''}
+        ${hasContactAccess ? `
+          <div class="card">
+            <h3>Contact Info</h3>
+            <p class="subtle">Only visible to you because you're this player or a club admin.</p>
+            ${contactRows.length
+              ? contactRows.map(([label, value]) => `
+                  <div style="padding: 4px 0;"><span class="meta" style="margin:0;">${label}:</span> ${escapeHtml(value)}</div>
+                `).join('')
+              : '<p class="empty">No contact info on file yet.</p>'}
+          </div>
+        ` : ''}
         <div class="card">
           <h3>Videos</h3>
           ${videos.length
@@ -592,6 +631,11 @@
       if (form.elements[f]) form.elements[f].value = p[f] || '';
     });
 
+    const contactForm = $('#contactForm');
+    ['phone', 'contact_email', 'parent_phone', 'parent_email'].forEach((f) => {
+      if (contactForm.elements[f]) contactForm.elements[f].value = p[f] || '';
+    });
+
     loadVideos();
     loadMyRegistrations();
   }
@@ -608,6 +652,21 @@
     } catch (err) {
       $('#profileSaveMsg').textContent = '';
       alert('Could not save profile: ' + err.message);
+    }
+  });
+
+  $('#contactForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const body = Object.fromEntries(fd.entries());
+    $('#contactSaveMsg').textContent = '';
+    $('#contactErrorMsg').textContent = '';
+    try {
+      currentUserData = await api('/players/me', { method: 'PATCH', body: JSON.stringify(body) });
+      $('#contactSaveMsg').textContent = 'Saved.';
+      setTimeout(() => { $('#contactSaveMsg').textContent = ''; }, 2500);
+    } catch (err) {
+      $('#contactErrorMsg').textContent = err.message;
     }
   });
 
