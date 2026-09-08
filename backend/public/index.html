@@ -3,18 +3,18 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Filthy Rich 707 Football Club</title>
+<link rel="icon" href="/brand/logo.png" />
+<title>Filthy Rich 7v7 Football Club</title>
 <style>
   :root {
-    --bg: #0b0d10;
-    --panel: #14171b;
-    --panel-2: #1c2027;
-    --border: #262b33;
+    --bg: #000000;
+    --panel: #121212;
+    --panel-2: #1a1a1a;
+    --border: #2a2a2a;
     --text: #f2f3f5;
     --text-dim: #9aa1ac;
-    --gold: #d4af37;
+    --gold: #c9a227;
     --gold-dim: #a9872c;
-    --red: #b5121b;
     --danger: #e5484d;
     --radius: 10px;
   }
@@ -29,19 +29,12 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 24px;
-    background: linear-gradient(90deg, var(--red), #7a0d13);
+    padding: 10px 24px;
+    background: #000000;
     border-bottom: 3px solid var(--gold);
   }
-  header .brand {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-weight: 800;
-    font-size: 1.15rem;
-    letter-spacing: 0.02em;
-  }
-  header .brand .num { color: var(--gold); }
+  header .brand { display: flex; align-items: center; }
+  header .brand img { height: 56px; width: auto; display: block; }
   nav { display: flex; gap: 6px; }
   nav button {
     background: transparent;
@@ -52,9 +45,9 @@
     cursor: pointer;
     font-size: 0.9rem;
   }
-  nav button.active, nav button:hover { background: rgba(255,255,255,0.15); }
+  nav button.active, nav button:hover { background: rgba(201,162,39,0.2); color: var(--gold); }
   #authArea { display: flex; align-items: center; gap: 10px; }
-  #authArea span { font-size: 0.85rem; color: #f3d9db; }
+  #authArea span { font-size: 0.85rem; color: var(--text-dim); }
   button.primary {
     background: var(--gold);
     color: #1a1400;
@@ -104,9 +97,9 @@
   textarea { min-height: 70px; resize: vertical; }
   .pill {
     display: inline-block;
-    background: rgba(212,175,55,0.15);
+    background: rgba(201,162,39,0.15);
     color: var(--gold);
-    border: 1px solid rgba(212,175,55,0.4);
+    border: 1px solid rgba(201,162,39,0.4);
     padding: 2px 9px;
     border-radius: 999px;
     font-size: 0.75rem;
@@ -126,7 +119,7 @@
 <body>
 
 <header>
-  <div class="brand"><span>FILTHY RICH <span class="num">707</span></span> Football Club</div>
+  <div class="brand"><img src="/brand/logo.png" alt="Filthy Rich 7v7 Football Club" /></div>
   <nav>
     <button data-view="schedule" class="navbtn active">Schedule</button>
     <button data-view="profile" class="navbtn">My Profile</button>

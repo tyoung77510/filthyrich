@@ -2,12 +2,13 @@
 
 Guidance for Claude Code when working in this repository.
 
-# Filthy Rich 707 Football Club
+# Filthy Rich 7v7 Football Club
 
-Player-facing app for the Filthy Rich 707 Football Club: players sign up, view the tournament
+Player-facing app for the Filthy Rich 7v7 Football Club: players sign up, view the tournament
 schedule, register for tournaments, and post links to their highlight reels / high school game
-film. No club branding assets exist yet beyond the name — treat "Filthy Rich 707" as provisional
-until the owner confirms exact spelling/branding.
+film. "7v7" is the football format (7-on-7), not an area code — confirmed by the owner's own logo
+(`backend/public/brand/logo.png`), which is now used in the app header/favicon. Brand palette
+sampled from that logo: black background (`#000`), gold/mustard accent (`#c9a227`), white text.
 
 ## Run / build / test
 
@@ -48,9 +49,9 @@ questions asked at the time. Revisit with the owner rather than assuming they're
   integration, no entry-fee collection. If tournaments need to charge a fee, that's a real feature
   to design (see Ordo7's `billing.js` for the existing Level 7 pattern for Stripe-via-REST), not
   something to bolt on ad hoc.
-- **Club name/branding** ("Filthy Rich 707 Football Club") is a best guess from a voice-transcribed
-  request plus the `filthyrich` repo name — not confirmed by the owner. Confirm exact
-  name/spelling/logo before this goes anywhere public-facing.
+
+**Resolved:** club name/branding — the owner supplied the real logo, so "Filthy Rich 7v7 Football
+Club" and the black/gold palette above are confirmed, not a guess.
 
 ## Conventions
 

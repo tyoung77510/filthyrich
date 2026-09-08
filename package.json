@@ -1,8 +1,8 @@
 {
-  "name": "filthyrich-707-fc",
+  "name": "filthyrich-7v7-fc",
   "version": "0.1.0",
   "private": true,
-  "description": "Filthy Rich 707 Football Club — player signup, tournament schedule/registration, and video links.",
+  "description": "Filthy Rich 7v7 Football Club — player signup, tournament schedule/registration, and video links.",
   "engines": {
     "node": ">=22.5.0"
   },

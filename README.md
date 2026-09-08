@@ -1,11 +1,11 @@
-# Filthy Rich 707 Football Club
+# Filthy Rich 7v7 Football Club
 
 A player-facing app for the club: sign up, view the tournament schedule, register for
 tournaments, and post links to highlight reels and game film.
 
-> **Name/branding is provisional.** "Filthy Rich 707" is a best guess from a voice-transcribed
-> request plus this repo's name (`filthyrich`) — confirm the real spelling/branding before this
-> goes live anywhere public. See `CLAUDE.md` for the other defaults assumed during scaffolding.
+> Branding (name, logo, black/gold palette) comes from the owner's own logo file
+> (`backend/public/brand/logo.png`). See `CLAUDE.md` for the remaining defaults assumed during
+> scaffolding that still need sign-off (video handling, no payment processing).
 
 ## Quick start
 

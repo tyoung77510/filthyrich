@@ -386,7 +386,7 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`Filthy Rich 707 Football Club API + frontend at http://localhost:${PORT}`);
+  console.log(`Filthy Rich 7v7 Football Club API + frontend at http://localhost:${PORT}`);
 });
 
 module.exports = server;
