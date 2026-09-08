@@ -346,7 +346,10 @@
       const result = await api(path, { method: 'POST', body: JSON.stringify(body) });
       token = result.token;
       localStorage.setItem('frfc_token', token);
-      currentUserData = result.user;
+      // result.user is the flat {id, email, name, role} shape from login/signup —
+      // it has no nested `profile`. Fetch /auth/me for the full shape so the
+      // profile form isn't blank on first render after signing in.
+      currentUserData = await api('/auth/me');
       renderAuthArea();
       e.target.reset();
       showView('profile');
