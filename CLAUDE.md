@@ -33,7 +33,7 @@ node backend/src/server.js     # API + frontend at http://localhost:3000
 | `db.js` | SQLite schema (users, sessions, player_profiles, tournaments, registrations, videos) + `ensureColumn()` migration helper. |
 | `auth.js` | `crypto.scrypt` password hashing + opaque bearer/cookie session tokens. |
 
-`backend/public/index.html` is the whole frontend — nav between Schedule / Profile / Admin views,
+`backend/public/index.html` is the whole frontend — nav between Schedule / Players / Profile / Admin views,
 `fetch`-based API calls, token kept in `localStorage`.
 
 ## Product decisions made without the owner's explicit sign-off (flag before treating as final)
@@ -60,6 +60,14 @@ Club" and the black/gold palette above are confirmed, not a guess.
   video) or admin role (tournament create/edit/delete). Keep this pattern for new routes.
 - **Schema changes go through `ensureColumn()`** in `db.js`, not by editing `CREATE TABLE` — an
   existing local DB won't pick up a new column otherwise. New columns must be nullable/defaulted.
-- First user isn't auto-promoted to admin — there's no admin yet. Promote one manually:
-  `sqlite3 backend/data/filthyrich.db "UPDATE users SET role='admin' WHERE email='...'"` (or via
-  `node:sqlite` in a one-off script) until an admin-invite flow exists.
+- **The first account ever created becomes admin automatically** (`handleSignup` checks
+  `COUNT(*) FROM users` before insert). Every signup after that is a regular player. This means
+  on a fresh install, whoever signs up first owns the admin account — don't leave a production
+  instance's first signup open to the public before an admin exists. To promote someone else
+  later: `sqlite3 backend/data/filthyrich.db "UPDATE users SET role='admin' WHERE email='...'"`
+  (or via `node:sqlite` in a one-off script) — there's no in-app invite flow yet.
+- **`publicProfile()` vs `ownProfile()`** in `server.js`: `ownProfile()` includes email and is
+  only ever returned to the signed-in owner of that account (`/api/auth/me`,
+  `PATCH /api/players/me`). `publicProfile()` omits email and is what the roster directory
+  (`GET /api/players`) and any player-by-id lookup (`GET /api/players/:id`) return — anyone can
+  hit those with no auth, so don't add email or other contact info back into `publicProfile()`.

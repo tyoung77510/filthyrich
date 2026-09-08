@@ -122,6 +122,7 @@
   <div class="brand"><img src="/brand/logo.png" alt="Filthy Rich 7v7 Football Club" /></div>
   <nav>
     <button data-view="schedule" class="navbtn active">Schedule</button>
+    <button data-view="roster" class="navbtn">Players</button>
     <button data-view="profile" class="navbtn">My Profile</button>
     <button data-view="admin" class="navbtn" id="adminNavBtn" hidden>Admin</button>
   </nav>
@@ -141,6 +142,20 @@
   <section id="view-tournament" class="view">
     <button class="secondary" id="backToSchedule">&larr; Back to schedule</button>
     <div id="tournamentDetail"></div>
+  </section>
+
+  <!-- PLAYER ROSTER / DIRECTORY -->
+  <section id="view-roster" class="view">
+    <h1>Players</h1>
+    <p class="subtle">Browse the club roster — coaches and recruiters, no account needed.</p>
+    <input id="rosterSearch" placeholder="Search by name, position, high school, city..." style="max-width: 420px; margin-bottom: 16px;" />
+    <div id="rosterList"></div>
+  </section>
+
+  <!-- SINGLE PLAYER (PUBLIC VIEW) -->
+  <section id="view-player" class="view">
+    <button class="secondary" id="backToRoster">&larr; Back to players</button>
+    <div id="playerDetail"></div>
   </section>
 
   <!-- PROFILE -->
@@ -415,6 +430,86 @@
 
   $('#backToSchedule').onclick = () => showView('schedule');
 
+  // ---- roster / player directory ----
+  let rosterSearchTimer = null;
+
+  async function renderRoster(query) {
+    const list = $('#rosterList');
+    list.innerHTML = '<p class="empty">Loading...</p>';
+    try {
+      const qs = query ? '?q=' + encodeURIComponent(query) : '';
+      const players = await api('/players' + qs);
+      if (players.length === 0) {
+        list.innerHTML = '<p class="empty">' + (query ? 'No players match that search.' : 'No players yet.') + '</p>';
+        return;
+      }
+      list.innerHTML = '';
+      players.forEach((p) => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        const meta = [p.position, p.high_school, [p.city, p.state].filter(Boolean).join(', ')]
+          .filter(Boolean)
+          .join(' &middot; ');
+        card.innerHTML = `
+          <div class="row between">
+            <h3>${escapeHtml(p.name)}</h3>
+            ${p.grad_year ? '<span class="pill">Class of ' + escapeHtml(String(p.grad_year)) + '</span>' : ''}
+          </div>
+          <div class="meta">${meta || 'No profile info yet'}</div>
+          <div class="meta">${p.video_count} video${p.video_count === 1 ? '' : 's'}</div>
+          <button class="secondary" data-id="${p.id}">View Profile</button>
+        `;
+        card.querySelector('button').onclick = () => openPlayer(p.id);
+        list.appendChild(card);
+      });
+    } catch (err) {
+      list.innerHTML = '<p class="error">Could not load players: ' + escapeHtml(err.message) + '</p>';
+    }
+  }
+
+  $('#rosterSearch').addEventListener('input', (e) => {
+    clearTimeout(rosterSearchTimer);
+    const value = e.target.value;
+    rosterSearchTimer = setTimeout(() => renderRoster(value), 250);
+  });
+
+  async function openPlayer(id) {
+    showView('player');
+    const detail = $('#playerDetail');
+    detail.innerHTML = '<p class="empty">Loading...</p>';
+    try {
+      const [player, videos] = await Promise.all([
+        api('/players/' + id),
+        api('/players/' + id + '/videos'),
+      ]);
+      const p = player.profile || {};
+      const meta = [p.position, p.grad_year ? 'Class of ' + p.grad_year : null, p.high_school, [p.city, p.state].filter(Boolean).join(', '), p.height, p.weight]
+        .filter(Boolean)
+        .join(' &middot; ');
+      detail.innerHTML = `
+        <h1>${escapeHtml(player.name)}</h1>
+        <p class="subtle">${meta || 'No profile info yet'}</p>
+        ${p.bio ? '<div class="card">' + escapeHtml(p.bio) + '</div>' : ''}
+        <div class="card">
+          <h3>Videos</h3>
+          ${videos.length
+            ? videos.map((v) => `
+                <div style="padding: 8px 0; border-bottom: 1px solid var(--border);">
+                  <strong>${escapeHtml(v.title)}</strong>
+                  <span class="pill" style="margin-left: 6px;">${v.type === 'game_film' ? 'Game Film' : 'Highlight'}</span><br/>
+                  <a class="videolink" href="${escapeHtml(v.url)}" target="_blank" rel="noopener">${escapeHtml(v.url)}</a>
+                </div>
+              `).join('')
+            : '<p class="empty">No videos posted yet.</p>'}
+        </div>
+      `;
+    } catch (err) {
+      detail.innerHTML = '<p class="error">Could not load player: ' + escapeHtml(err.message) + '</p>';
+    }
+  }
+
+  $('#backToRoster').onclick = () => showView('roster');
+
   // ---- profile ----
   function renderProfileView() {
     $('#profileLoggedOut').hidden = !!currentUserData;
@@ -543,6 +638,7 @@
     btn.addEventListener('click', () => {
       showView(btn.dataset.view);
       if (btn.dataset.view === 'profile') renderProfileView();
+      if (btn.dataset.view === 'roster') renderRoster($('#rosterSearch').value);
     });
   });
 

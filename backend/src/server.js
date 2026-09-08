@@ -89,7 +89,9 @@ function isValidVideoUrl(raw) {
   }
 }
 
-function publicProfile(userRow) {
+// Full profile — includes email. Only for the signed-in owner looking at their
+// own account (handleMe/handleUpdateProfile), never for viewing someone else.
+function ownProfile(userRow) {
   const profile = db
     .prepare('SELECT * FROM player_profiles WHERE user_id = ?')
     .get(userRow.id);
@@ -97,6 +99,21 @@ function publicProfile(userRow) {
     id: userRow.id,
     name: userRow.name,
     email: userRow.email,
+    role: userRow.role,
+    profile: profile || null,
+  };
+}
+
+// Public profile — no email. Anyone can look up a player by ID (recruiters
+// browsing the roster don't have accounts), so this must never leak contact
+// info; only the player themselves sees their own email, via ownProfile.
+function publicProfile(userRow) {
+  const profile = db
+    .prepare('SELECT * FROM player_profiles WHERE user_id = ?')
+    .get(userRow.id);
+  return {
+    id: userRow.id,
+    name: userRow.name,
     role: userRow.role,
     profile: profile || null,
   };
@@ -116,14 +133,20 @@ async function handleSignup(req, res) {
   const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
   if (existing) return send(res, 409, { error: 'An account with that email already exists' });
 
+  // Bootstrap: the very first account created on a fresh install becomes admin,
+  // so there's a way in without touching the database by hand. Every signup
+  // after that is a regular player.
+  const { count } = db.prepare('SELECT COUNT(*) AS count FROM users').get();
+  const role = count === 0 ? 'admin' : 'player';
+
   const { hash, salt } = hashPassword(password);
   const info = db
-    .prepare('INSERT INTO users (email, password_hash, salt, name) VALUES (?, ?, ?, ?)')
-    .run(email, hash, salt, name);
+    .prepare('INSERT INTO users (email, password_hash, salt, name, role) VALUES (?, ?, ?, ?, ?)')
+    .run(email, hash, salt, name, role);
   db.prepare('INSERT INTO player_profiles (user_id) VALUES (?)').run(info.lastInsertRowid);
 
   const token = createSession(info.lastInsertRowid);
-  send(res, 201, { token, user: { id: info.lastInsertRowid, email, name, role: 'player' } });
+  send(res, 201, { token, user: { id: info.lastInsertRowid, email, name, role } });
 }
 
 async function handleLogin(req, res) {
@@ -151,7 +174,7 @@ function handleLogout(req, res) {
 function handleMe(req, res) {
   const user = requireAuth(req, res);
   if (!user) return;
-  send(res, 200, publicProfile(user));
+  send(res, 200, ownProfile(user));
 }
 
 async function handleUpdateProfile(req, res) {
@@ -165,13 +188,40 @@ async function handleUpdateProfile(req, res) {
   const setClause = updates.map((f) => `${f} = ?`).join(', ');
   const values = updates.map((f) => body[f]);
   db.prepare(`UPDATE player_profiles SET ${setClause} WHERE user_id = ?`).run(...values, user.id);
-  send(res, 200, publicProfile(user));
+  send(res, 200, ownProfile(user));
 }
 
 function handleGetPlayer(req, res, id) {
-  const row = db.prepare('SELECT id, name, email, role FROM users WHERE id = ?').get(id);
+  const row = db.prepare('SELECT id, name, role FROM users WHERE id = ?').get(id);
   if (!row) return send(res, 404, { error: 'Player not found' });
   send(res, 200, publicProfile(row));
+}
+
+// Public roster directory — no auth required, so coaches/recruiters can browse
+// without an account. Deliberately omits email (only the signed-in owner or an
+// admin sees that, via /api/players/me or /api/auth/me).
+function handleListPlayers(req, res, query) {
+  const rows = db
+    .prepare(
+      `SELECT u.id, u.name, p.position, p.grad_year, p.high_school, p.city, p.state,
+              (SELECT COUNT(*) FROM videos v WHERE v.user_id = u.id) AS video_count
+       FROM users u
+       LEFT JOIN player_profiles p ON p.user_id = u.id
+       WHERE u.role = 'player'
+       ORDER BY u.name ASC`
+    )
+    .all();
+
+  const search = (query.get('q') || '').trim().toLowerCase();
+  const filtered = search
+    ? rows.filter((r) =>
+        [r.name, r.position, r.high_school, r.city, r.state]
+          .filter(Boolean)
+          .some((f) => f.toLowerCase().includes(search))
+      )
+    : rows;
+
+  send(res, 200, filtered);
 }
 
 function handleListTournaments(req, res) {
@@ -361,6 +411,7 @@ const server = http.createServer(async (req, res) => {
       if (parts[1] === 'auth' && parts[2] === 'me' && req.method === 'GET') return handleMe(req, res);
 
       if (parts[1] === 'players' && parts[2] === 'me' && req.method === 'PATCH') return await handleUpdateProfile(req, res);
+      if (parts[1] === 'players' && parts.length === 2 && req.method === 'GET') return handleListPlayers(req, res, url.searchParams);
       if (parts[1] === 'players' && parts[3] === 'videos' && req.method === 'GET') return handleListPlayerVideos(req, res, parts[2]);
       if (parts[1] === 'players' && parts.length === 3 && req.method === 'GET') return handleGetPlayer(req, res, parts[2]);
 
