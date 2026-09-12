@@ -19,24 +19,6 @@ ensureColumn('player_profiles', 'contact_email', 'contact_email TEXT');
 ensureColumn('player_profiles', 'parent_phone', 'parent_phone TEXT');
 ensureColumn('player_profiles', 'parent_email', 'parent_email TEXT');
 
-// One-time content seed (Taj, via chat) — the club's Double Good popcorn
-// fundraiser. Idempotent on the donate link, so it's safe to run on every
-// server start without creating a duplicate; remove once posted.
-(function seedDoubleGoodFundraiser() {
-  const link = 'https://popup.doublegood.com/event/3755576c-aebd-11f1-adbe-9b03241a0df4';
-  const existing = db.prepare('SELECT id FROM fundraisers WHERE link = ?').get(link);
-  if (existing) return;
-  db.prepare(
-    `INSERT INTO fundraisers (title, description, goal_amount, link, status)
-     VALUES (?, ?, ?, ?, 'active')`
-  ).run(
-    'Double Good Popcorn Fundraiser',
-    "Runs January 4–11. We're selling Double Good's award-winning popcorn and earning 50% of every sale. The fundraiser page is live on Double Good's site — visit the link to get started.",
-    10000,
-    link
-  );
-})();
-
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 const VALID_VIDEO_TYPES = new Set(['highlight', 'game_film']);
