@@ -79,6 +79,21 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
+
+  -- Fundraising initiatives (spirit wear sales, GoFundMe-style drives, team
+  -- sponsorships, etc.). No payment processing happens in this app — "link"
+  -- points off-site to wherever the club actually collects money, and
+  -- raised_amount is a number an admin updates by hand as funds come in.
+  CREATE TABLE IF NOT EXISTS fundraisers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    description TEXT,
+    goal_amount REAL,
+    raised_amount REAL NOT NULL DEFAULT 0,
+    link TEXT,
+    status TEXT NOT NULL DEFAULT 'active',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
 `);
 
 // Old databases self-upgrade here — add new nullable columns via this helper

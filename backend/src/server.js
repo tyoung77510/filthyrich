@@ -22,6 +22,7 @@ ensureColumn('player_profiles', 'parent_email', 'parent_email TEXT');
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 const VALID_VIDEO_TYPES = new Set(['highlight', 'game_film']);
+const VALID_FUNDRAISER_STATUSES = new Set(['active', 'completed']);
 const ALLOWED_VIDEO_HOSTS = [
   'youtube.com',
   'www.youtube.com',
@@ -97,6 +98,17 @@ function isValidVideoUrl(raw) {
 // full RFC 5322 validator.
 function isValidEmail(raw) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(raw).trim());
+}
+
+// A fundraiser's donate link can point anywhere off-site (GoFundMe, Venmo,
+// PayPal, a team store) — unlike video links there's no fixed host allowlist,
+// just "must actually be a link" (https, so it can't be javascript:/data:/etc).
+function isValidHttpsUrl(raw) {
+  try {
+    return new URL(raw).protocol === 'https:';
+  } catch {
+    return false;
+  }
 }
 
 // Full profile — includes email. Only for the signed-in owner looking at their
@@ -358,6 +370,94 @@ function handleCancelRegistration(req, res, tournamentId) {
   send(res, 200, { ok: true });
 }
 
+// --- fundraising ------------------------------------------------------------
+
+function handleListFundraisers(req, res) {
+  const rows = db
+    .prepare(
+      `SELECT * FROM fundraisers
+       ORDER BY CASE WHEN status = 'active' THEN 0 ELSE 1 END, created_at DESC`
+    )
+    .all();
+  send(res, 200, rows);
+}
+
+function handleGetFundraiser(req, res, id) {
+  const row = db.prepare('SELECT * FROM fundraisers WHERE id = ?').get(id);
+  if (!row) return send(res, 404, { error: 'Fundraiser not found' });
+  send(res, 200, row);
+}
+
+async function handleCreateFundraiser(req, res) {
+  const admin = requireAdmin(req, res);
+  if (!admin) return;
+  const body = await readBody(req);
+  const { title, description, goal_amount, link } = body;
+  if (!title) return send(res, 400, { error: 'title is required' });
+  if (goal_amount != null && goal_amount !== '' && !(Number(goal_amount) >= 0)) {
+    return send(res, 400, { error: 'goal_amount must be a non-negative number' });
+  }
+  if (link && !isValidHttpsUrl(link)) {
+    return send(res, 400, { error: 'link must be a valid https:// URL' });
+  }
+
+  const info = db
+    .prepare(
+      `INSERT INTO fundraisers (title, description, goal_amount, link)
+       VALUES (?, ?, ?, ?)`
+    )
+    .run(
+      title,
+      description || null,
+      goal_amount != null && goal_amount !== '' ? Number(goal_amount) : null,
+      link || null
+    );
+  send(res, 201, db.prepare('SELECT * FROM fundraisers WHERE id = ?').get(info.lastInsertRowid));
+}
+
+async function handlePatchFundraiser(req, res, id) {
+  const admin = requireAdmin(req, res);
+  if (!admin) return;
+  const existing = db.prepare('SELECT * FROM fundraisers WHERE id = ?').get(id);
+  if (!existing) return send(res, 404, { error: 'Fundraiser not found' });
+
+  const body = await readBody(req);
+  const fields = ['title', 'description', 'goal_amount', 'raised_amount', 'link', 'status'];
+  const updates = fields.filter((f) => f in body);
+  if (updates.length === 0) return send(res, 400, { error: 'No recognized fields provided' });
+
+  for (const f of ['goal_amount', 'raised_amount']) {
+    if (f in body && body[f] !== null && body[f] !== '' && !(Number(body[f]) >= 0)) {
+      return send(res, 400, { error: `${f.replace('_', ' ')} must be a non-negative number` });
+    }
+  }
+  if ('link' in body && body.link && !isValidHttpsUrl(body.link)) {
+    return send(res, 400, { error: 'link must be a valid https:// URL' });
+  }
+  if ('status' in body && !VALID_FUNDRAISER_STATUSES.has(body.status)) {
+    return send(res, 400, { error: "status must be 'active' or 'completed'" });
+  }
+
+  const values = updates.map((f) => {
+    if (f === 'goal_amount' || f === 'raised_amount') {
+      return body[f] === '' || body[f] == null ? null : Number(body[f]);
+    }
+    return body[f] === '' ? null : body[f];
+  });
+  const setClause = updates.map((f) => `${f} = ?`).join(', ');
+  db.prepare(`UPDATE fundraisers SET ${setClause} WHERE id = ?`).run(...values, id);
+  send(res, 200, db.prepare('SELECT * FROM fundraisers WHERE id = ?').get(id));
+}
+
+function handleDeleteFundraiser(req, res, id) {
+  const admin = requireAdmin(req, res);
+  if (!admin) return;
+  const existing = db.prepare('SELECT id FROM fundraisers WHERE id = ?').get(id);
+  if (!existing) return send(res, 404, { error: 'Fundraiser not found' });
+  db.prepare('DELETE FROM fundraisers WHERE id = ?').run(id);
+  send(res, 200, { ok: true });
+}
+
 async function handleCreateVideo(req, res) {
   const user = requireAuth(req, res);
   if (!user) return;
@@ -460,6 +560,12 @@ const server = http.createServer(async (req, res) => {
 
       if (parts[1] === 'videos' && parts.length === 2 && req.method === 'POST') return await handleCreateVideo(req, res);
       if (parts[1] === 'videos' && parts.length === 3 && req.method === 'DELETE') return handleDeleteVideo(req, res, parts[2]);
+
+      if (parts[1] === 'fundraisers' && parts.length === 2 && req.method === 'GET') return handleListFundraisers(req, res);
+      if (parts[1] === 'fundraisers' && parts.length === 2 && req.method === 'POST') return await handleCreateFundraiser(req, res);
+      if (parts[1] === 'fundraisers' && parts.length === 3 && req.method === 'GET') return handleGetFundraiser(req, res, parts[2]);
+      if (parts[1] === 'fundraisers' && parts.length === 3 && req.method === 'PATCH') return await handlePatchFundraiser(req, res, parts[2]);
+      if (parts[1] === 'fundraisers' && parts.length === 3 && req.method === 'DELETE') return handleDeleteFundraiser(req, res, parts[2]);
 
       return send(res, 404, { error: 'Not found' });
     }

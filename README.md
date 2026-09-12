@@ -33,14 +33,19 @@ build-time-only toolchain (Capacitor) and doesn't touch anything the server runs
 - **Public player directory** — a "Players" tab anyone can browse (no account needed), searchable
   by name/position/high school/city, linking to each player's public profile and videos. Email is
   never exposed here or on a public profile page — only the signed-in owner sees their own email.
-- **Admin** — a user with `role = 'admin'` can create/edit/delete tournaments from the Admin tab.
-  The very first account created on a fresh install becomes admin automatically; every signup
-  after that is a regular player. Promote someone else later directly in the database (see
-  `CLAUDE.md`) until a proper admin-invite flow exists.
+- **Fundraising** — a public "Fundraising" tab listing the club's active/completed fundraising
+  initiatives (title, description, optional $ goal with a progress bar, optional off-site donate
+  link). No payment processing happens in-app — `link` points wherever the club actually collects
+  money (GoFundMe, Venmo, a team store), and `raised_amount` is a number an admin updates by hand.
+- **Admin** — a user with `role = 'admin'` can create/edit/delete tournaments and fundraisers from
+  the Admin tab. The very first account created on a fresh install becomes admin automatically;
+  every signup after that is a regular player. Promote someone else later directly in the database
+  (see `CLAUDE.md`) until a proper admin-invite flow exists.
 
 ## Not built yet
 
-- Tournament entry fees / payment collection (registration is roster-only right now).
+- Tournament entry fees / payment collection (registration and fundraising are both roster/link-only
+  right now — no payment processing in-app).
 - Direct video file upload (link-only for v1).
 - Password reset / email verification.
 - Team rosters beyond a single club-wide player pool (no sub-teams/age-groups yet).

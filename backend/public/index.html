@@ -302,6 +302,22 @@
     text-transform: uppercase;
     letter-spacing: 0.03em;
   }
+  /* Fundraiser progress bar — width of .progress-fill is set inline per-card
+     from raised/goal. */
+  .progress-track {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    height: 10px;
+    overflow: hidden;
+    margin: 8px 0;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--gold-dim), var(--gold));
+    border-radius: 999px;
+    transition: width var(--dur-slow) var(--ease);
+  }
   .error { color: var(--danger); font-size: 0.85rem; min-height: 1.1em; }
   .success { color: #6fd08c; font-size: 0.85rem; min-height: 1.1em; }
   a.videolink { color: var(--gold); text-decoration: none; word-break: break-all; }
@@ -355,6 +371,7 @@
     #contactForm > div:last-child button.primary,
     #videoForm > div:last-child button.primary,
     #tournamentForm > div:last-child button.primary,
+    #fundraiserForm > div:last-child button.primary,
     #authForm button.primary { width: 100%; }
   }
 </style>
@@ -369,6 +386,7 @@
   <div class="brand"><img src="/brand/logo.png" alt="Filthy Rich 7v7 Football Club" /></div>
   <nav>
     <button data-view="schedule" class="navbtn active">Schedule</button>
+    <button data-view="fundraising" class="navbtn">Fundraising</button>
     <button data-view="roster" class="navbtn">Players</button>
     <button data-view="profile" class="navbtn">My Profile</button>
     <button data-view="admin" class="navbtn admin-navbtn" hidden>Admin</button>
@@ -382,6 +400,7 @@
      click handling) drives both without any extra code. -->
 <nav class="bottom-nav">
   <button data-view="schedule" class="navbtn active">Schedule</button>
+  <button data-view="fundraising" class="navbtn">Fundraising</button>
   <button data-view="roster" class="navbtn">Players</button>
   <button data-view="profile" class="navbtn">Profile</button>
   <button data-view="admin" class="navbtn admin-navbtn" hidden>Admin</button>
@@ -400,6 +419,13 @@
   <section id="view-tournament" class="view">
     <button class="secondary" id="backToSchedule">&larr; Back to schedule</button>
     <div id="tournamentDetail"></div>
+  </section>
+
+  <!-- FUNDRAISING -->
+  <section id="view-fundraising" class="view">
+    <h1>Fundraising</h1>
+    <p class="subtle">Support the club — every initiative below helps fund tournaments, travel, and gear.</p>
+    <div id="fundraiserList"></div>
   </section>
 
   <!-- PLAYER ROSTER / DIRECTORY -->
@@ -507,21 +533,45 @@
     </form>
   </section>
 
-  <!-- ADMIN: CREATE TOURNAMENT -->
+  <!-- ADMIN -->
   <section id="view-admin" class="view">
-    <h1>Admin — Create Tournament</h1>
-    <form class="grid2" id="tournamentForm">
-      <div><label>Name</label><input name="name" required /></div>
-      <div><label>Location</label><input name="location" /></div>
-      <div><label>Start Date</label><input name="start_date" type="date" required /></div>
-      <div><label>End Date</label><input name="end_date" type="date" /></div>
-      <div><label>Registration Deadline</label><input name="registration_deadline" type="date" /></div>
-      <div style="grid-column: 1 / -1;"><label>Description</label><textarea name="description"></textarea></div>
-      <div style="grid-column: 1 / -1;">
-        <button class="primary" type="submit">Create Tournament</button>
-        <span class="success" id="tournamentCreateMsg"></span>
-      </div>
-    </form>
+    <h1>Admin</h1>
+
+    <div class="card">
+      <h3>Create Tournament</h3>
+      <form class="grid2" id="tournamentForm">
+        <div><label>Name</label><input name="name" required /></div>
+        <div><label>Location</label><input name="location" /></div>
+        <div><label>Start Date</label><input name="start_date" type="date" required /></div>
+        <div><label>End Date</label><input name="end_date" type="date" /></div>
+        <div><label>Registration Deadline</label><input name="registration_deadline" type="date" /></div>
+        <div style="grid-column: 1 / -1;"><label>Description</label><textarea name="description"></textarea></div>
+        <div style="grid-column: 1 / -1;">
+          <button class="primary" type="submit">Create Tournament</button>
+          <span class="success" id="tournamentCreateMsg"></span>
+        </div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h3>Create Fundraiser</h3>
+      <form class="grid2" id="fundraiserForm">
+        <div style="grid-column: 1 / -1;"><label>Title</label><input name="title" placeholder="e.g. Spring Travel Fund" required /></div>
+        <div><label>Goal Amount ($, optional)</label><input name="goal_amount" type="number" min="0" step="0.01" placeholder="5000" /></div>
+        <div><label>Donate Link (optional)</label><input name="link" type="url" placeholder="https://gofundme.com/..." /></div>
+        <div style="grid-column: 1 / -1;"><label>Description</label><textarea name="description" placeholder="What this fundraiser is for..."></textarea></div>
+        <div style="grid-column: 1 / -1;">
+          <button class="primary" type="submit">Create Fundraiser</button>
+          <span class="success" id="fundraiserCreateMsg"></span>
+          <span class="error" id="fundraiserCreateErrorMsg"></span>
+        </div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h3>Manage Fundraisers</h3>
+      <div id="fundraiserManageList"></div>
+    </div>
   </section>
 
 </main>
@@ -620,6 +670,10 @@
     try {
       return new Date(d + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
     } catch { return d; }
+  }
+
+  function fmtMoney(n) {
+    return Number(n || 0).toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
   }
 
   // ---- auth UI ----
@@ -774,6 +828,43 @@
   }
 
   $('#backToSchedule').onclick = () => showView('schedule');
+
+  // ---- fundraising ----
+  async function renderFundraisers() {
+    const list = $('#fundraiserList');
+    list.innerHTML = '<p class="empty">Loading...</p>';
+    try {
+      const fundraisers = await api('/fundraisers');
+      if (fundraisers.length === 0) {
+        list.innerHTML = '<p class="empty">No fundraisers posted yet — check back soon.</p>';
+        return;
+      }
+      list.innerHTML = '';
+      fundraisers.forEach((f) => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        const pct = f.goal_amount ? Math.min(100, Math.round((f.raised_amount / f.goal_amount) * 100)) : null;
+        card.innerHTML = `
+          <div class="row between">
+            <h3>${escapeHtml(f.title)}</h3>
+            <span class="pill">${f.status === 'completed' ? 'Completed' : 'Active'}</span>
+          </div>
+          ${f.description ? '<p>' + escapeHtml(f.description) + '</p>' : ''}
+          ${pct !== null ? `
+            <div class="progress-track"><div class="progress-fill" style="width: ${pct}%;"></div></div>
+            <div class="meta">${fmtMoney(f.raised_amount)} raised of ${fmtMoney(f.goal_amount)} goal (${pct}%)</div>
+          ` : (f.raised_amount > 0 ? `<div class="meta">${fmtMoney(f.raised_amount)} raised so far</div>` : '')}
+          ${f.link ? `<button class="primary" data-donate>Donate</button>` : ''}
+        `;
+        if (f.link) {
+          card.querySelector('[data-donate]').onclick = () => window.open(f.link, '_blank', 'noopener');
+        }
+        list.appendChild(card);
+      });
+    } catch (err) {
+      list.innerHTML = '<p class="error">Could not load fundraisers: ' + escapeHtml(err.message) + '</p>';
+    }
+  }
 
   // ---- roster / player directory ----
   let rosterSearchTimer = null;
@@ -1022,12 +1113,105 @@
     }
   });
 
+  $('#fundraiserForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const body = Object.fromEntries(fd.entries());
+    if (!body.goal_amount) delete body.goal_amount;
+    if (!body.link) delete body.link;
+    $('#fundraiserCreateMsg').textContent = '';
+    $('#fundraiserCreateErrorMsg').textContent = '';
+    try {
+      await api('/fundraisers', { method: 'POST', body: JSON.stringify(body) });
+      $('#fundraiserCreateMsg').textContent = 'Created.';
+      e.target.reset();
+      renderFundraiserManageList();
+      setTimeout(() => { $('#fundraiserCreateMsg').textContent = ''; }, 2500);
+    } catch (err) {
+      $('#fundraiserCreateErrorMsg').textContent = err.message;
+    }
+  });
+
+  async function renderFundraiserManageList() {
+    if (!currentUserData || currentUserData.role !== 'admin') return;
+    const list = $('#fundraiserManageList');
+    list.innerHTML = '<p class="empty">Loading...</p>';
+    try {
+      const fundraisers = await api('/fundraisers');
+      if (fundraisers.length === 0) {
+        list.innerHTML = '<p class="empty">No fundraisers yet.</p>';
+        return;
+      }
+      list.innerHTML = '';
+      fundraisers.forEach((f) => {
+        const row = document.createElement('div');
+        row.className = 'card';
+        row.innerHTML = `
+          <div class="row between">
+            <h3>${escapeHtml(f.title)}</h3>
+            <span class="pill">${f.status === 'completed' ? 'Completed' : 'Active'}</span>
+          </div>
+          <form class="row" data-role="raised-form">
+            <div style="flex: 1; min-width: 140px;">
+              <label>Raised Amount ($)</label>
+              <input name="raised_amount" type="number" min="0" step="0.01" value="${f.raised_amount}" />
+            </div>
+            <button class="secondary" type="submit">Save</button>
+            <button class="secondary" type="button" data-role="toggle-status">${f.status === 'completed' ? 'Reactivate' : 'Mark Completed'}</button>
+            <button class="danger" type="button" data-role="delete">Delete</button>
+          </form>
+          <span class="success" data-role="msg"></span>
+        `;
+        row.querySelector('[data-role="raised-form"]').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const raised_amount = new FormData(e.target).get('raised_amount');
+          try {
+            await api('/fundraisers/' + f.id, { method: 'PATCH', body: JSON.stringify({ raised_amount }) });
+            const msg = row.querySelector('[data-role="msg"]');
+            msg.textContent = 'Saved.';
+            setTimeout(() => { msg.textContent = ''; }, 2000);
+            renderFundraisers();
+          } catch (err) {
+            alert('Could not update fundraiser: ' + err.message);
+          }
+        });
+        row.querySelector('[data-role="toggle-status"]').onclick = async () => {
+          try {
+            await api('/fundraisers/' + f.id, {
+              method: 'PATCH',
+              body: JSON.stringify({ status: f.status === 'completed' ? 'active' : 'completed' }),
+            });
+            renderFundraiserManageList();
+            renderFundraisers();
+          } catch (err) {
+            alert('Could not update fundraiser: ' + err.message);
+          }
+        };
+        row.querySelector('[data-role="delete"]').onclick = async () => {
+          if (!confirm('Delete "' + f.title + '"? This cannot be undone.')) return;
+          try {
+            await api('/fundraisers/' + f.id, { method: 'DELETE' });
+            renderFundraiserManageList();
+            renderFundraisers();
+          } catch (err) {
+            alert('Could not delete fundraiser: ' + err.message);
+          }
+        };
+        list.appendChild(row);
+      });
+    } catch (err) {
+      list.innerHTML = '<p class="error">' + escapeHtml(err.message) + '</p>';
+    }
+  }
+
   // ---- nav ----
   $all('.navbtn').forEach((btn) => {
     btn.addEventListener('click', () => {
       showView(btn.dataset.view);
       if (btn.dataset.view === 'profile') renderProfileView();
       if (btn.dataset.view === 'roster') renderRoster($('#rosterSearch').value);
+      if (btn.dataset.view === 'fundraising') renderFundraisers();
+      if (btn.dataset.view === 'admin') renderFundraiserManageList();
     });
   });
 
